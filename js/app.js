@@ -84,7 +84,7 @@ const VIEWS = {
     </section>`,
 
   info: () => `
-    ${head('INFO', '나에 대해')}
+    ${head('INFO', '성향')}
     <div class="box">
       <div class="kv">${data.info.rows.map((r, i) => `
         ${T(`info.rows.${i}.label`, 'k')}
@@ -100,11 +100,11 @@ const VIEWS = {
   genre: () => `
     ${head('GENRE', '장르')}
     <div class="box">
-      <div class="box-title">소비하는 장르</div>
+      <div class="box-title">주력 장르</div>
       <div class="chips">${data.genre.list.map((g, i) => `<span style="display:inline-flex;gap:4px;align-items:center">${T(`genre.list.${i}`, 'chip')}${del('genre.list', i)}</span>`).join('')}${add('genre.list', '장르')}</div>
     </div>
     <div class="box">
-      <div class="box-title">장르별 최애 · 최애 CP</div>
+      <div class="box-title">최애 · 소비 CP</div>
       ${data.genre.favs.map((f, i) => `
         <div class="row-line fav" style="display:flex;gap:8px">
           <div style="flex:1;display:flex;flex-direction:column;gap:4px">
@@ -117,7 +117,7 @@ const VIEWS = {
     </div>`,
 
   dream: () => `
-    ${head('DREAM', '나의 드림')}
+    ${head('DREAM', '드림')}
     <div class="box">
       <div class="box-title">드림 성향</div>
       ${T('dream.intro', 'text', 'div', true)}
@@ -144,7 +144,7 @@ const VIEWS = {
   ng: () => `
     ${head('NG', '지뢰')}
     <div class="box hard">
-      <div style="display:flex;align-items:center;gap:8px"><span class="big">극지뢰</span><span class="hard-badge">보이면 블락</span></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="big">극지뢰</span><span class="hard-badge">수용 불가능</span></div>
       ${T('ng.hardNote', '', 'div')}
       ${data.ng.hard.map((x, i) => `<div class="row-line ng-item"><span class="mark" aria-hidden="true">✕</span>${T(`ng.hard.${i}`, '', 'span')}<span style="flex:1"></span>${del('ng.hard', i)}</div>`).join('')}
       <button type="button" class="ed ed-add" data-add="ng.hard" style="color:#fff;border-color:#fff">+ 극지뢰</button>
@@ -157,7 +157,7 @@ const VIEWS = {
     </div>`,
 
   list: () => `
-    ${head('LIST', '맞배려', T('list.intro', 'sub', 'div'))}
+    ${head('LIST', '배려 리스트', T('list.intro', 'sub', 'div'))}
     <div class="box">
       <div class="tbl">
         <div class="th">장르</div><div class="th">캐릭터</div>
