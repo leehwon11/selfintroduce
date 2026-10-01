@@ -104,6 +104,7 @@ body.editing .ed { display: inline-flex !important; }
 .ed-del { width: 30px; height: 30px; flex-shrink: 0; border: none; border-radius: 15px; background: #fde8e3; color: var(--red); align-items: center; justify-content: center; font-weight: 700; }
 .ed-small { border: 1.5px solid var(--ink); background: #fff; border-radius: 12px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
 .editbar { position: fixed; top: 0; left: 0; right: 0; z-index: 30; background: var(--ink); color: #fff; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.editbar[hidden] { display: none; }
 .editbar .grow { flex: 1; }
 .editbar button { border: none; border-radius: 16px; padding: 8px 14px; font-weight: 700; font-size: 13px; min-height: 36px; }
 .editbar .save { background: var(--sky); color: #fff; }
