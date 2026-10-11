@@ -28,6 +28,15 @@ function toast(msg, ms = 2800) {
 }
 const imgSrc = (p) => (p ? blobs[p] || p : '');
 
+// 예전 형식 데이터 정리 (CP 한 개 → 여러 개)
+function normalize(d) {
+  (d.genre?.favs || []).forEach((f) => {
+    if (!Array.isArray(f.cps)) f.cps = f.cp ? [f.cp] : [];
+    delete f.cp;
+  });
+  return d;
+}
+
 // 편집 가능한 글자: T(경로, 클래스, 태그, 여러줄/굵게)
 function T(path, cls = '', tag = 'span', multi = false) {
   const raw = get(path) ?? '';
@@ -35,17 +44,23 @@ function T(path, cls = '', tag = 'span', multi = false) {
   return `<${tag} class="${cls}" data-path="${path}" ${multi ? 'data-multi' : ''} aria-label="${editing ? '편집 가능한 글자' : ''}">${html}</${tag}>`;
 }
 const del = (listPath, i, label = '삭제') => `<button type="button" class="ed ed-del" data-del="${listPath}" data-i="${i}" aria-label="${label}">✕</button>`;
-const add = (listPath, label) => `<button type="button" class="ed ed-add" data-add="${listPath}">+ ${label}</button>`;
+const add = (listPath, label, style = '') => `<button type="button" class="ed ed-add" data-add="${listPath}" style="${style}">+ ${label}</button>`;
+// 순서 바꾸기 ▲▼ (편집 모드에서만 보여요)
+const MV = 'width:30px;height:30px;flex-shrink:0;border:none;border-radius:15px;background:#dcecf8;color:#1b2a3a;align-items:center;justify-content:center;font-size:12px;padding:0';
+const mv = (listPath, i, len) => `
+  <button type="button" class="ed" data-mv="${listPath}" data-i="${i}" data-d="-1" aria-label="위로" title="위로" style="${MV}${i === 0 ? ';opacity:.35' : ''}" ${i === 0 ? 'disabled' : ''}>▲</button>
+  <button type="button" class="ed" data-mv="${listPath}" data-i="${i}" data-d="1" aria-label="아래로" title="아래로" style="${MV}${i === len - 1 ? ';opacity:.35' : ''}" ${i === len - 1 ? 'disabled' : ''}>▼</button>`;
 const TEMPLATES = {
   'home.badges': () => ({ text: '새 뱃지', hot: false }),
   'info.rows': () => ({ label: '항목', text: '내용' }),
   'genre.list': () => '새 장르',
-  'genre.favs': () => ({ genre: '장르', char: '최애 캐릭터', cp: '캐릭터 × 캐릭터' }),
+  'genre.favs': () => ({ genre: '장르', char: '최애 캐릭터', cps: ['캐릭터 × 캐릭터'] }),
   'dream.pairs': () => ({ image: '', genre: '장르', char: '드림캐', me: '드림주', pairname: '페어명', tags: '키워드' }),
   'ng.hard': () => '극지뢰 항목',
   'ng.soft': () => '지뢰 항목',
   'list.rows': () => ({ genre: '장르', chars: '캐릭터' }),
 };
+const template = (path) => (path.endsWith('.cps') ? '캐릭터 × 캐릭터' : TEMPLATES[path]());
 
 // ───────── 섹션 ─────────
 const ICONS = {
@@ -70,10 +85,10 @@ const VIEWS = {
         ${T('home.handle', 'muted')}
       </div>
       <div class="chips" style="justify-content:center;gap:8px">
-        ${data.home.badges.map((b, i) => `<span style="display:inline-flex;gap:4px;align-items:center">
+        ${data.home.badges.map((b, i, arr) => `<span style="display:inline-flex;gap:4px;align-items:center">
           ${T(`home.badges.${i}.text`, 'badge' + (b.hot ? ' hot' : ''))}
           <button type="button" class="ed ed-small" data-toggle="home.badges.${i}.hot" aria-pressed="${!!b.hot}">${b.hot ? '강조 끄기' : '강조'}</button>
-          ${del('home.badges', i, '뱃지 삭제')}</span>`).join('')}
+          ${mv('home.badges', i, arr.length)}${del('home.badges', i, '뱃지 삭제')}</span>`).join('')}
         ${add('home.badges', '뱃지')}
       </div>
       <div class="ed box" style="flex-direction:column;align-items:stretch;text-align:left;width:100%">
@@ -86,9 +101,9 @@ const VIEWS = {
   info: () => `
     ${head('INFO', '성향')}
     <div class="box">
-      <div class="kv">${data.info.rows.map((r, i) => `
+      <div class="kv">${data.info.rows.map((r, i, arr) => `
         ${T(`info.rows.${i}.label`, 'k')}
-        <div style="display:flex;gap:6px;align-items:flex-start">${T(`info.rows.${i}.text`, 'text', 'div', true)}${del('info.rows', i)}</div>`).join('')}
+        <div style="display:flex;gap:6px;align-items:flex-start">${T(`info.rows.${i}.text`, 'text', 'div', true)}${mv('info.rows', i, arr.length)}${del('info.rows', i)}</div>`).join('')}
       </div>
       ${add('info.rows', '항목')}
     </div>
@@ -101,19 +116,26 @@ const VIEWS = {
     ${head('GENRE', '장르')}
     <div class="box">
       <div class="box-title">주력 장르</div>
-      <div class="chips">${data.genre.list.map((g, i) => `<span style="display:inline-flex;gap:4px;align-items:center">${T(`genre.list.${i}`, 'chip')}${del('genre.list', i)}</span>`).join('')}${add('genre.list', '장르')}</div>
+      <div class="chips">${data.genre.list.map((g, i, arr) => `<span style="display:inline-flex;gap:4px;align-items:center">${T(`genre.list.${i}`, 'chip')}${mv('genre.list', i, arr.length)}${del('genre.list', i)}</span>`).join('')}${add('genre.list', '장르')}</div>
     </div>
     <div class="box">
       <div class="box-title">최애 · 소비 CP</div>
-      ${data.genre.favs.map((f, i) => `
-        <div class="row-line fav" style="display:flex;gap:8px">
-          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+      ${data.genre.favs.map((f, i, arr) => `
+        <div class="row-line fav" style="display:flex;gap:8px;align-items:flex-start">
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0">
             ${T(`genre.favs.${i}.genre`, 'g', 'div')}
             <div style="font-size:13px"><span class="muted">최애</span> · ${T(`genre.favs.${i}.char`)}</div>
-            <div style="font-size:13px"><span class="muted">CP</span> · ${T(`genre.favs.${i}.cp`, 'cp')}</div>
-          </div>${del('genre.favs', i)}
+            <div style="font-size:13px;display:flex;gap:6px;align-items:flex-start">
+              <span class="muted" style="flex-shrink:0">CP</span><span class="muted" style="flex-shrink:0">·</span>
+              <div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;min-width:0">
+                ${f.cps.map((cp, j, cps) => `<span style="display:inline-flex;gap:4px;align-items:center">${T(`genre.favs.${i}.cps.${j}`, 'cp')}${editing ? '' : (j < cps.length - 1 ? '<span class="muted" aria-hidden="true">/</span>' : '')}${mv(`genre.favs.${i}.cps`, j, cps.length)}${del(`genre.favs.${i}.cps`, j, 'CP 삭제')}</span>`).join('')}
+                ${add(`genre.favs.${i}.cps`, 'CP', 'padding:3px 10px;min-height:30px;font-size:12px')}
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center">${mv('genre.favs', i, arr.length)}${del('genre.favs', i)}</div>
         </div>`).join('')}
-      ${add('genre.favs', '최애 추가')}
+      ${add('genre.favs', '장르 추가')}
     </div>`,
 
   dream: () => `
@@ -122,7 +144,7 @@ const VIEWS = {
       <div class="box-title">드림 성향</div>
       ${T('dream.intro', 'text', 'div', true)}
     </div>
-    ${data.dream.pairs.map((p, i) => `
+    ${data.dream.pairs.map((p, i, arr) => `
       <article class="box">
         <div class="dream-card">
           <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
@@ -130,7 +152,7 @@ const VIEWS = {
             <button type="button" class="ed ed-small" data-img="dream.pairs.${i}.image">사진</button>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1">
-            <div style="display:flex;gap:6px;align-items:center">${T(`dream.pairs.${i}.genre`, 'tag')}<span style="flex:1"></span>${del('dream.pairs', i, '드림 삭제')}</div>
+            <div style="display:flex;gap:4px;align-items:center">${T(`dream.pairs.${i}.genre`, 'tag')}<span style="flex:1"></span>${mv('dream.pairs', i, arr.length)}${del('dream.pairs', i, '드림 삭제')}</div>
             <div class="names">${T(`dream.pairs.${i}.char`)} <span class="x">×</span> ${T(`dream.pairs.${i}.me`)}</div>
             ${T(`dream.pairs.${i}.pairname`, 'muted', 'div')}
             ${editing
@@ -146,13 +168,13 @@ const VIEWS = {
     <div class="box hard">
       <div style="display:flex;align-items:center;gap:8px"><span class="big">극지뢰</span><span class="hard-badge">수용 불가능</span></div>
       ${T('ng.hardNote', '', 'div')}
-      ${data.ng.hard.map((x, i) => `<div class="row-line ng-item"><span class="mark" aria-hidden="true">✕</span>${T(`ng.hard.${i}`, '', 'span')}<span style="flex:1"></span>${del('ng.hard', i)}</div>`).join('')}
+      ${data.ng.hard.map((x, i, arr) => `<div class="row-line ng-item"><span class="mark" aria-hidden="true">✕</span>${T(`ng.hard.${i}`, '', 'span')}<span style="flex:1"></span>${mv('ng.hard', i, arr.length)}${del('ng.hard', i)}</div>`).join('')}
       <button type="button" class="ed ed-add" data-add="ng.hard" style="color:#fff;border-color:#fff">+ 극지뢰</button>
     </div>
     <div class="box">
       <span class="big">지뢰</span>
       ${T('ng.softNote', 'muted', 'div')}
-      ${data.ng.soft.map((x, i) => `<div class="row-line ng-item"><span class="mark" aria-hidden="true">✕</span>${T(`ng.soft.${i}`)}<span style="flex:1"></span>${del('ng.soft', i)}</div>`).join('')}
+      ${data.ng.soft.map((x, i, arr) => `<div class="row-line ng-item"><span class="mark" aria-hidden="true">✕</span>${T(`ng.soft.${i}`)}<span style="flex:1"></span>${mv('ng.soft', i, arr.length)}${del('ng.soft', i)}</div>`).join('')}
       ${add('ng.soft', '지뢰')}
     </div>`,
 
@@ -161,7 +183,7 @@ const VIEWS = {
     <div class="box">
       <div class="tbl">
         <div class="th">장르</div><div class="th">캐릭터</div>
-        ${data.list.rows.map((r, i) => `${T(`list.rows.${i}.genre`, 'muted', 'div')}<div style="display:flex;gap:6px;align-items:center;font-weight:700">${T(`list.rows.${i}.chars`)}<span style="flex:1"></span>${del('list.rows', i)}</div>`).join('')}
+        ${data.list.rows.map((r, i, arr) => `${T(`list.rows.${i}.genre`, 'muted', 'div')}<div style="display:flex;gap:4px;align-items:center;font-weight:700">${T(`list.rows.${i}.chars`)}<span style="flex:1"></span>${mv('list.rows', i, arr.length)}${del('list.rows', i)}</div>`).join('')}
       </div>
       ${add('list.rows', '맞배려 추가')}
     </div>
@@ -205,9 +227,17 @@ function bind() {
     get(b.dataset.del).splice(+b.dataset.i, 1); dirty = true; render();
   }));
   app.querySelectorAll('[data-add]').forEach((b) => (b.onclick = () => {
-    get(b.dataset.add).push(TEMPLATES[b.dataset.add]()); dirty = true; render();
+    get(b.dataset.add).push(template(b.dataset.add)); dirty = true; render();
     const items = app.querySelectorAll(`[data-path^="${b.dataset.add}."]`);
     items[items.length - 1]?.focus();
+  }));
+  app.querySelectorAll('[data-mv]').forEach((b) => (b.onclick = () => {
+    const list = get(b.dataset.mv), i = +b.dataset.i, j = i + +b.dataset.d;
+    if (j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    dirty = true; render();
+    // 옮긴 항목의 같은 버튼으로 포커스 따라가기
+    app.querySelector(`[data-mv="${b.dataset.mv}"][data-i="${j}"][data-d="${b.dataset.d}"]`)?.focus();
   }));
   app.querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => {
     set(b.dataset.toggle, !get(b.dataset.toggle)); dirty = true; render();
@@ -259,7 +289,7 @@ async function startEdit() {
   if (!cfg) return;
   toast('최신 내용 불러오는 중…');
   try {
-    data = (await readData(cfg)).data;
+    data = normalize((await readData(cfg)).data);
   } catch (e) {
     if (e.status === 401 || e.status === 403) { clearCfg(); toast(e.message + ' — 다시 입력해주세요', 4000); return; }
     toast('불러오기 실패: ' + e.message, 4000); return;
@@ -268,7 +298,7 @@ async function startEdit() {
   document.body.classList.add('editing');
   bar.hidden = false;
   bar.innerHTML = `
-    <span class="grow">편집 중 · 점선 글자를 눌러 바로 고쳐요</span>
+    <span class="grow">편집 중 · 점선 글자를 눌러 고치고 ▲▼로 순서를 바꿔요</span>
     <button type="button" class="quit" data-q>나가기</button>
     <button type="button" class="save" data-s>저장</button>`;
   bar.querySelector('[data-s]').onclick = save;
@@ -320,7 +350,7 @@ window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); }
 try {
   const r = await fetch('data.json?t=' + Date.now());
   if (!r.ok) throw new Error('data.json 을 찾을 수 없어요');
-  data = await r.json();
+  data = normalize(await r.json());
   render();
 } catch (e) {
   app.innerHTML = `<div class="box"><b>불러오지 못했어요</b><div class="muted">${esc(e.message)}</div></div>`;
